@@ -1,10 +1,14 @@
-def init():
+def init(value, should_close=None):
     import cv2
     import time
     import os
     import datetime
 
-    cap = cv2.VideoCapture(0)
+    print("Initializing camera with value:", value)
+    cap = cv2.VideoCapture(value)
+    if not cap.isOpened():
+        print(f"Camera at index {value} could not be opened.")
+        return
     current_time = datetime.datetime.now().strftime("DATE - %dth of the %m TIME %H-%M-%S")
 
     face_cascade = cv2.CascadeClassifier(
@@ -20,8 +24,21 @@ def init():
 
     frame_size = (int(cap.get(3)), int(cap.get(4)))
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+
+    clicked = [False]
+
+    def on_mouse(event, x, y, flags, param):
+        if event == cv2.EVENT_LBUTTONDOWN:
+            clicked[0] = True
+
+    cv2.namedWindow("Camera")
+    cv2.setMouseCallback("Camera", on_mouse)
+
     while True:
         d, frame = cap.read()
+        if not d or frame is None:
+            print("Failed to read from camera. Exiting...")
+            break
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         faces = face_cascade.detectMultiScale(gray, 1.1, 11)
@@ -35,7 +52,7 @@ def init():
                 out = cv2.VideoWriter(filename, fourcc, fps, frame_size)
                 print("Capturing...")
             else:
-                timer_started = False  # reset timer while detection continues
+                timer_started = False
 
         else:
             if detection and not timer_started:
@@ -51,7 +68,6 @@ def init():
 
         if detection:
             out.write(frame)
-            # Draw rectangles around detected bodies and faces
 
         for (x, y, width, height) in bodies:
             cv2.rectangle(frame, (x, y), (x + width, y + height), (0, 0, 255), 2)
@@ -61,10 +77,17 @@ def init():
 
         cv2.imshow("Camera", frame)
 
-        if cv2.waitKey(1) == ord('s'):
+        if clicked[0]:
+            print("Window clicked. Stopping camera...")
             break
 
-    out.release()
+        # Or if 's' key is pressed
+        if cv2.waitKey(1) == ord('s'):
+            print("Stopping camera...")
+            break
+
+    if detection:
+        out.release()
+
     cap.release()
     cv2.destroyAllWindows()
-
