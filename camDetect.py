@@ -1,14 +1,35 @@
-def init(value, should_close=None):
-    import cv2
-    import time
-    import os
-    import datetime
+import cv2
+import os
+import datetime
+import time
+import tkinter as tk
+from tkinter import messagebox
 
-    print("Initializing camera with value:", value)
+
+def show_message(title, msg):
+    root = tk.Tk()
+    root.withdraw()  # hide the root window
+    messagebox.showinfo(title, msg)
+    root.destroy()
+
+
+def init(value, should_close=None):
+    os.system('cls' if os.name == 'nt' else 'clear')
     cap = cv2.VideoCapture(value)
+
+    # If this index doesn't work, try adjusting up or down
     if not cap.isOpened():
-        print(f"Camera at index {value} could not be opened.")
-        return
+        show_message("Camera Error", f"Cam: {value + 1} could not be opened, this is likely due to Cam: {value + 1} not existing.")
+        cap = cv2.VideoCapture(value - 1)
+        if cap.isOpened():
+            value = value - 1
+            os.system('cls' if os.name == 'nt' else 'clear')
+            show_message("Fallback", f"Using previous available camera [Cam: {value + 1}]")
+        else:
+            os.system('cls' if os.name == 'nt' else 'clear')
+            show_message("Camera Error", "No available cameras found near this index.")
+            return
+
     current_time = datetime.datetime.now().strftime("DATE - %dth of the %m TIME %H-%M-%S")
 
     face_cascade = cv2.CascadeClassifier(
@@ -31,13 +52,14 @@ def init(value, should_close=None):
         if event == cv2.EVENT_LBUTTONDOWN:
             clicked[0] = True
 
-    cv2.namedWindow("Camera")
-    cv2.setMouseCallback("Camera", on_mouse)
+    window_name = f"Cam: {value + 1}. [Click Window To Close]"
+    cv2.namedWindow(window_name)
+    cv2.setMouseCallback(window_name, on_mouse)
 
     while True:
         d, frame = cap.read()
         if not d or frame is None:
-            print("Failed to read from camera. Exiting...")
+            show_message("Camera Error", "Failed to read from camera. Exiting.")
             break
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -50,7 +72,6 @@ def init(value, should_close=None):
                 timer_started = False
                 filename = f"CAM_ALERT_{datetime.datetime.now().strftime('Year - %Y%m%d Time - %H%M%S')}.mp4"
                 out = cv2.VideoWriter(filename, fourcc, fps, frame_size)
-                print("Capturing...")
             else:
                 timer_started = False
 
@@ -63,8 +84,6 @@ def init(value, should_close=None):
                     detection = False
                     timer_started = False
                     out.release()
-                    print('Recording ended.')
-                    print("Saved to:", os.getcwd(), filename)
 
         if detection:
             out.write(frame)
@@ -75,15 +94,9 @@ def init(value, should_close=None):
         for (x, y, width, height) in faces:
             cv2.rectangle(frame, (x, y), (x + width, y + height), (0, 255, 0), 2)
 
-        cv2.imshow("Camera", frame)
+        cv2.imshow(window_name, frame)
 
         if clicked[0]:
-            print("Window clicked. Stopping camera...")
-            break
-
-        # Or if 's' key is pressed
-        if cv2.waitKey(1) == ord('s'):
-            print("Stopping camera...")
             break
 
     if detection:
