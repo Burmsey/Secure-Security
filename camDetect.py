@@ -13,7 +13,7 @@ def show_message(title, msg):
     root.destroy()
 
 
-def init(value, should_close=None):
+def init(value, should_close):
     os.system('cls' if os.name == 'nt' else 'clear')
     cap = cv2.VideoCapture(value)
 
@@ -97,6 +97,8 @@ def init(value, should_close=None):
         cv2.imshow(window_name, frame)
 
         if clicked[0]:
+            break
+        if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
     if detection:
